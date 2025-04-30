@@ -6,10 +6,6 @@ A simple vanilla-JavaScript dashboard that connects to your Google Calendar and 
 - **Clickable list** of today’s events (title + time)  
 - **OAuth2** implicit-flow authorization—no backend required  
 
-<p align="center">
-  <img src="screenshot.png" alt="Dashboard screenshot" width="400"/>
-</p>
-
 ## Features
 
 - **Client-only**: pure HTML/JS; no build step or server-side code  
@@ -32,9 +28,3 @@ A simple vanilla-JavaScript dashboard that connects to your Google Calendar and 
    - **Test user** added on the OAuth consent screen (for unverified apps)  
 2. Your **Client ID** from GCP
 
-## Getting Started
-
-1. **Clone** this repo:
-   ```bash
-   git clone https://github.com/your-username/meetings-dashboard.git
-   cd meetings-dashboard
