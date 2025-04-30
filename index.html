@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Your Meetings Dashboard</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      text-align: center;
+      padding: 2rem;
+    }
+    #count {
+      font-size: 3rem;
+      margin-top: 1rem;
+    }
+    #authorize {
+      padding: 0.5rem 1rem;
+      font-size: 1rem;
+    }
+    #events {
+      list-style: none;
+      padding: 0;
+      margin: 2rem auto 0;
+      max-width: 600px;
+      text-align: left;
+    }
+    #events li {
+      padding: 0.75rem;
+      border-bottom: 1px solid #ddd;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    #events li:hover {
+      background: #f5f5f5;
+    }
+    #events li strong {
+      display: block;
+      margin-bottom: 0.25rem;
+    }
+  </style>
+</head>
+<body>
+  <h1>Your Meetings Today</h1>
+  <div id="count">–</div>
+  <button id="authorize">Authorize Google Calendar</button>
+  <ul id="events"></ul>
+
+  <script>
+  (function() {
+    const CLIENT_ID    = 'CLIENT_ID';
+    const REDIRECT_URI = 'http://localhost:8000/index.html';
+    const SCOPE        = encodeURIComponent('https://www.googleapis.com/auth/calendar.readonly');
+    const AUTH_URL     =
+      'https://accounts.google.com/o/oauth2/v2/auth' +
+      '?client_id='    + CLIENT_ID +
+      '&redirect_uri=' + REDIRECT_URI +
+      '&response_type=token' +
+      '&scope='        + SCOPE +
+      '&prompt=consent' +
+      '&include_granted_scopes=true';
+
+    const countEl  = document.getElementById('count');
+    const authBtn  = document.getElementById('authorize');
+    const eventsEl = document.getElementById('events');
+
+    function getToken() {
+      if (!location.hash.startsWith('#')) return null;
+      return new URLSearchParams(location.hash.slice(1)).get('access_token');
+    }
+
+    function renderCount(n) {
+      countEl.textContent = n;
+    }
+
+    function renderEvents(items) {
+      eventsEl.innerHTML = '';
+      if (items.length === 0) {
+        const li = document.createElement('li');
+        li.textContent = 'No meetings today.';
+        eventsEl.appendChild(li);
+        return;
+      }
+      items.forEach(evt => {
+        const li = document.createElement('li');
+        const title = evt.summary || '(No title)';
+        const start = new Date(evt.start.dateTime || evt.start.date);
+        const end   = new Date(evt.end.dateTime   || evt.end.date);
+        const fmt   = d => d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+        li.innerHTML = `
+          <strong>${title}</strong>
+          ${fmt(start)} – ${fmt(end)}
+        `;
+        // clicking opens the event in Google Calendar
+        if (evt.htmlLink) {
+          li.onclick = () => window.open(evt.htmlLink, '_blank');
+        }
+        eventsEl.appendChild(li);
+      });
+    }
+
+    // Fetch today’s events
+    async function fetchEvents(token) {
+      const now     = new Date();
+      const timeMin = new Date(now.setHours(0,0,0,0)).toISOString();
+      const timeMax = new Date(now.setHours(23,59,59,999)).toISOString();
+      const url =
+        'https://www.googleapis.com/calendar/v3/calendars/primary/events' +
+        `?timeMin=${encodeURIComponent(timeMin)}` +
+        `&timeMax=${encodeURIComponent(timeMax)}` +
+        '&singleEvents=true&orderBy=startTime';
+
+      const res = await fetch(url, {
+        headers: { Authorization: 'Bearer ' + token }
+      });
+      if (!res.ok) {
+        console.error('Calendar API error', await res.text());
+        renderCount('⚠️');
+        return;
+      }
+      const data = await res.json();
+      const items = data.items || [];
+      renderCount(items.length);
+      renderEvents(items);
+    }
+
+    window.addEventListener('load', () => {
+      const token = getToken();
+      if (token) {
+        authBtn.style.display = 'none';
+        history.replaceState(null, '', REDIRECT_URI);
+        fetchEvents(token);
+      } else {
+        authBtn.onclick = () => window.location.href = AUTH_URL;
+      }
+    });
+  })();
+  </script>
+</body>
+</html>
